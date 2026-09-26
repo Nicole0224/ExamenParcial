@@ -17,11 +17,31 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
-// Publicación de eventos en PieHost (solo servidor).
+// Búsqueda con Algolia (solo servidor; la API key nunca sale al navegador).
+// Publicación de eventos en PieHost (solo servidor; el secreto nunca sale al navegador).
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<IIncidenciaSearchService, AlgoliaIncidenciaSearchService>();
 builder.Services.AddScoped<IPieHostEventPublisher, PieHostEventPublisher>();
 
+// Caché distribuida: Redis si hay connection string configurada
+// (Redis:ConnectionString / Redis__ConnectionString); si no, caché en
+// memoria para desarrollo local. El proveedor activo queda en logs.
+var redisConnection = builder.Configuration["Redis:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    builder.Services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+builder.Services.AddScoped<IIncidenciaListaCacheService, IncidenciaListaCacheService>();
+
 var app = builder.Build();
+
+app.Logger.LogInformation(
+    "Proveedor de caché distribuida: {Proveedor}.",
+    string.IsNullOrWhiteSpace(redisConnection) ? "memoria (Redis no configurado)" : "Redis");
 
 await DbInitializer.SeedAsync(app.Services);
 

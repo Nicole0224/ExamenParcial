@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GestionCreditos.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260926012641_AgregarIncidencias")]
+    [Migration("20260926005737_AgregarIncidencias")]
     partial class AgregarIncidencias
     {
         /// <inheritdoc />
