@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using GestionCreditos.Data;
 using GestionCreditos.Models;
+using GestionCreditos.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,12 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IIncidenciaSearchService, AlgoliaIncidenciaSearchService>();
+
 var app = builder.Build();
+
+await DbInitializer.SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -36,6 +42,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+app.MapAreaControllerRoute(
+    name: "operaciones",
+    areaName: "Operaciones",
+    pattern: "Operaciones/{controller=Incidencias}/{action=Index}/{id?}");
 
 app.MapControllerRoute(
     name: "default",
