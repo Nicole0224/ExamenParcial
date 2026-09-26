@@ -1,3 +1,4 @@
+using StackExchange.Redis;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using GestionCreditos.Data;
@@ -26,10 +27,19 @@ builder.Services.AddScoped<IPieHostEventPublisher, PieHostEventPublisher>();
 // Caché distribuida: Redis si hay connection string configurada
 // (Redis:ConnectionString / Redis__ConnectionString); si no, caché en
 // memoria para desarrollo local. El proveedor activo queda en logs.
+// Caché distribuida: Redis si hay connection string configurada
+// (Redis:ConnectionString / Redis__ConnectionString); si no, caché en
+// memoria para desarrollo local. El proveedor activo queda en logs.
 var redisConnection = builder.Configuration["Redis:ConnectionString"];
 if (!string.IsNullOrWhiteSpace(redisConnection))
 {
-    builder.Services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
+    var redisOptions = ConfigurationOptions.Parse(redisConnection);
+    redisOptions.AbortOnConnectFail = false;
+
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.ConfigurationOptions = redisOptions;
+    });
 }
 else
 {
