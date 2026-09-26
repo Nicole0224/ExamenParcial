@@ -12,6 +12,7 @@ namespace GestionCreditos.Areas.Operaciones.Controllers;
 public class IncidenciasController(
     ApplicationDbContext db,
     IIncidenciaSearchService searchService,
+    IIncidenciaListaCacheService listaCache,
     ILogger<IncidenciasController> logger) : Controller
 {
     public async Task<IActionResult> Index([FromQuery] string? q)
@@ -20,16 +21,15 @@ public class IncidenciasController(
 
         if (string.IsNullOrWhiteSpace(q))
         {
-            // Búsqueda vacía: listado normal de incidencias abiertas (sin Algolia).
-            viewModel.Incidencias = await db.Incidencias
-                .Where(i => i.Estado == EstadoIncidencia.Abierta)
-                .OrderByDescending(i => i.FechaReporte)
-                .ToListAsync();
+            // Listado general: se sirve desde la caché distribuida (Redis)
+            // de 60 segundos; el servicio registra si vino de caché o de BD.
+            viewModel.Incidencias = await listaCache.GetAbiertasAsync(HttpContext.RequestAborted);
             return View(viewModel);
         }
 
-        // Búsqueda con texto: el servidor consulta Algolia y luego muestra
-        // solo las coincidencias que continúan abiertas en la base de datos.
+        // Búsqueda con texto: el servidor consulta Algolia directamente,
+        // sin usar la caché, y muestra solo las coincidencias que
+        // continúan abiertas en la base de datos.
         try
         {
             var ids = await searchService.BuscarIdsAsync(q.Trim(), HttpContext.RequestAborted);
@@ -62,6 +62,10 @@ public class IncidenciasController(
         {
             incidencia.Estado = EstadoIncidencia.Cerrada;
             await db.SaveChangesAsync();
+
+            // Invalida la caché del listado antes de volver a consultar
+            // los datos (el RedirectToAction provoca una lectura actualizada).
+            await listaCache.InvalidarAsync(incidencia.Id);
             TempData["Mensaje"] = $"Incidencia #{incidencia.Id} cerrada correctamente.";
         }
 
