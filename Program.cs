@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using GestionCreditos.Data;
 using GestionCreditos.Models;
+using GestionCreditos.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,10 +13,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
+// Publicación de eventos en PieHost (solo servidor).
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IPieHostEventPublisher, PieHostEventPublisher>();
+
 var app = builder.Build();
+
+await DbInitializer.SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -36,6 +44,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+app.MapAreaControllerRoute(
+    name: "operaciones",
+    areaName: "Operaciones",
+    pattern: "Operaciones/{controller=Incidencias}/{action=Index}/{id?}");
 
 app.MapControllerRoute(
     name: "default",

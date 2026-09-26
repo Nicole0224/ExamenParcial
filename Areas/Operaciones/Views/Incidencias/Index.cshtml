@@ -1,0 +1,79 @@
+@model IncidenciasIndexViewModel
+
+@{
+    ViewData["Title"] = "Incidencias abiertas";
+}
+
+<h1>Incidencias abiertas en tiempo real</h1>
+
+@if (TempData["Mensaje"] is string mensaje)
+{
+    <div class="alert alert-success" role="alert">@mensaje</div>
+}
+
+@if (TempData["Aviso"] is string aviso)
+{
+    <div class="alert alert-warning" role="alert">@aviso</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
+}
+
+<div id="incidencias-tr"
+     data-tr-url="@Model.TiempoRealWsUrl"
+     data-lista-url="@Model.ListaUrl">
+    <p>
+        Estado del tiempo real:
+        <span id="tr-estado" class="badge text-bg-secondary">Desconectado</span>
+    </p>
+    @if (string.IsNullOrEmpty(Model.TiempoRealWsUrl))
+    {
+        <div class="alert alert-warning" role="alert">
+            El tiempo real no está configurado en el servidor; la lista se actualiza al recargar.
+        </div>
+    }
+    <div id="tr-avisos"></div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Estación</th>
+                <th>Descripción</th>
+                <th>Prioridad</th>
+                <th>Fecha de reporte</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="incidencias-cuerpo">
+            @foreach (var incidencia in Model.Incidencias)
+            {
+                <tr data-incidencia-id="@incidencia.Id">
+                    <td>@incidencia.Id</td>
+                    <td>@incidencia.Estacion</td>
+                    <td>@incidencia.Descripcion</td>
+                    <td>@incidencia.Prioridad</td>
+                    <td>@incidencia.FechaReporte.ToLocalTime().ToString("g")</td>
+                    <td>
+                        <form asp-area="Operaciones" asp-controller="Incidencias" asp-action="Cerrar"
+                              asp-route-id="@incidencia.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Cerrar</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (Model.Incidencias.Count == 0)
+    {
+        <p id="incidencias-vacio" class="text-muted">No hay incidencias abiertas para mostrar.</p>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/incidencias-tiemporeal.js" asp-append-version="true"></script>
+}
