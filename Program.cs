@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using GestionCreditos.Data;
 using GestionCreditos.Models;
+using GestionCreditos.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,27 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
+// Caché distribuida: Redis si hay connection string configurada
+// (Redis:ConnectionString / Redis__ConnectionString); si no, caché en
+// memoria para desarrollo local. El proveedor activo queda en logs.
+var redisConnection = builder.Configuration["Redis:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    builder.Services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+builder.Services.AddScoped<IIncidenciaListaCacheService, IncidenciaListaCacheService>();
+
 var app = builder.Build();
+
+app.Logger.LogInformation(
+    "Proveedor de caché distribuida: {Proveedor}.",
+    string.IsNullOrWhiteSpace(redisConnection) ? "memoria (Redis no configurado)" : "Redis");
+
+await DbInitializer.SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -36,6 +57,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+app.MapAreaControllerRoute(
+    name: "operaciones",
+    areaName: "Operaciones",
+    pattern: "Operaciones/{controller=Incidencias}/{action=Index}/{id?}");
 
 app.MapControllerRoute(
     name: "default",

@@ -1,0 +1,54 @@
+@model IncidenciasIndexViewModel
+
+@{
+    ViewData["Title"] = "Incidencias abiertas";
+}
+
+<h1>Incidencias abiertas con consulta rápida</h1>
+
+@if (TempData["Mensaje"] is string mensaje)
+{
+    <div class="alert alert-success" role="alert">@mensaje</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Estación</th>
+            <th>Descripción</th>
+            <th>Prioridad</th>
+            <th>Fecha de reporte</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var incidencia in Model.Incidencias)
+        {
+            <tr>
+                <td>@incidencia.Id</td>
+                <td>@incidencia.Estacion</td>
+                <td>@incidencia.Descripcion</td>
+                <td>@incidencia.Prioridad</td>
+                <td>@incidencia.FechaReporte.ToLocalTime().ToString("g")</td>
+                <td>
+                    <form asp-area="Operaciones" asp-controller="Incidencias" asp-action="Cerrar"
+                          asp-route-id="@incidencia.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Cerrar</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.Incidencias.Count == 0 && string.IsNullOrEmpty(Model.Error))
+{
+    <p class="text-muted">No hay incidencias abiertas para mostrar.</p>
+}
