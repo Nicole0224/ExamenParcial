@@ -4,22 +4,46 @@ using GestionCreditos.Models.ViewModels;
 using GestionCreditos.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GestionCreditos.Areas.Operaciones.Controllers;
 
 [Area("Operaciones")]
 public class IncidenciasController(
+    ApplicationDbContext db,
+    IIncidenciaSearchService searchService,
     IIncidenciaListaCacheService listaCache,
-    ApplicationDbContext db) : Controller
+    ILogger<IncidenciasController> logger) : Controller
 {
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] string? q)
     {
-        // Listado general: se sirve desde la caché distribuida (Redis)
-        // de 60 segundos; el servicio registra si vino de caché o de BD.
-        var viewModel = new IncidenciasIndexViewModel
+        var viewModel = new IncidenciasIndexViewModel { Q = q };
+
+        if (string.IsNullOrWhiteSpace(q))
         {
-            Incidencias = await listaCache.GetAbiertasAsync(HttpContext.RequestAborted)
-        };
+            // Listado general: se sirve desde la caché distribuida (Redis)
+            // de 60 segundos; el servicio registra si vino de caché o de BD.
+            viewModel.Incidencias = await listaCache.GetAbiertasAsync(HttpContext.RequestAborted);
+            return View(viewModel);
+        }
+
+        // Búsqueda con texto: el servidor consulta Algolia directamente,
+        // sin usar la caché, y muestra solo las coincidencias que
+        // continúan abiertas en la base de datos.
+        try
+        {
+            var ids = await searchService.BuscarIdsAsync(q.Trim(), HttpContext.RequestAborted);
+            viewModel.Incidencias = await db.Incidencias
+                .Where(i => i.Estado == EstadoIncidencia.Abierta && ids.Contains(i.Id))
+                .OrderByDescending(i => i.FechaReporte)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al buscar incidencias en Algolia.");
+            viewModel.Error = "La búsqueda no está disponible en este momento. Intente de nuevo más tarde.";
+        }
+
         return View(viewModel);
     }
 

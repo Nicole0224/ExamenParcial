@@ -16,6 +16,10 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
+// Búsqueda con Algolia (solo servidor; la API key nunca sale al navegador).
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IIncidenciaSearchService, AlgoliaIncidenciaSearchService>();
+
 // Caché distribuida: Redis si hay connection string configurada
 // (Redis:ConnectionString / Redis__ConnectionString); si no, caché en
 // memoria para desarrollo local. El proveedor activo queda en logs.

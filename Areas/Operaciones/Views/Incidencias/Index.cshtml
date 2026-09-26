@@ -16,6 +16,22 @@
     <div class="alert alert-danger" role="alert">@Model.Error</div>
 }
 
+<form method="get" class="row g-2 mb-3">
+    <div class="col-sm-8 col-md-6">
+        <input type="text" name="q" value="@Model.Q" class="form-control"
+               placeholder="Buscar por estación o descripción" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        <a asp-area="Operaciones" asp-controller="Incidencias" asp-action="Index" class="btn btn-secondary">Limpiar</a>
+    </div>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.Q) && string.IsNullOrEmpty(Model.Error))
+{
+    <p>Se encontraron @Model.Incidencias.Count incidencias abiertas.</p>
+}
+
 <table class="table table-striped">
     <thead>
         <tr>
