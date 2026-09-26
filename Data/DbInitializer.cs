@@ -6,12 +6,13 @@ namespace GestionCreditos.Data;
 
 /// <summary>
 /// Aplica migraciones pendientes y carga datos de prueba:
-/// incidencias (abiertas y cerradas) y un usuario para entrar al sistema.
+/// incidencias (abiertas y cerradas), rol Supervisor y un usuario supervisor.
 /// </summary>
 public static class DbInitializer
 {
     public const string SupervisorEmail = "supervisor@demo.local";
     public const string SupervisorPassword = "Supervisor123*";
+    public const string SupervisorRole = "Supervisor";
 
     public static async Task SeedAsync(IServiceProvider serviceProvider)
     {
@@ -67,10 +68,23 @@ public static class DbInitializer
             await db.SaveChangesAsync();
         }
 
-        var userManager = provider.GetRequiredService<UserManager<ApplicationUser>>();
-        if (await userManager.FindByEmailAsync(SupervisorEmail) is null)
+        var roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
+        if (!await roleManager.RoleExistsAsync(SupervisorRole))
         {
-            var user = new ApplicationUser
+            var roleResult = await roleManager.CreateAsync(new IdentityRole(SupervisorRole));
+            if (!roleResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "No se pudo crear el rol Supervisor: "
+                    + string.Join("; ", roleResult.Errors.Select(e => e.Description)));
+            }
+        }
+
+        var userManager = provider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = await userManager.FindByEmailAsync(SupervisorEmail);
+        if (user is null)
+        {
+            user = new ApplicationUser
             {
                 UserName = SupervisorEmail,
                 Email = SupervisorEmail,
@@ -83,6 +97,17 @@ public static class DbInitializer
                 throw new InvalidOperationException(
                     "No se pudo crear el usuario de prueba: "
                     + string.Join("; ", result.Errors.Select(e => e.Description)));
+            }
+        }
+
+        if (!await userManager.IsInRoleAsync(user, SupervisorRole))
+        {
+            var addResult = await userManager.AddToRoleAsync(user, SupervisorRole);
+            if (!addResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "No se pudo asignar el rol Supervisor: "
+                    + string.Join("; ", addResult.Errors.Select(e => e.Description)));
             }
         }
     }
