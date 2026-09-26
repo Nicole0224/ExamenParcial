@@ -1,0 +1,47 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+.idea/
+.vscode/
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Files built by Visual Studio
+*.dll
+*.exe
+*.pdb
+*.cache
+
+## SQLite database (schema is rebuilt via EF Core migrations)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+## User-specific files
+*.rsuser
+*.local
+
+## Publish output
+publish/
+artifacts/
+
+## Test results
+[Tt]est[Rr]esult*/
+*.trx
